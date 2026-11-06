@@ -3215,6 +3215,8 @@ router.get('/gcr-stats', async (req, res) => {
 // GCR-blocked/booked dates auto-block those platforms too. No auth — the token
 // in the URL path is the secret (see /api/dashboard/ical/feed-url to mint one).
 router.get('/ical/:slug/:tokenFile', async (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    res.set('Referrer-Policy', 'no-referrer');
     const { slug } = req.params;
     const token = String(req.params.tokenFile || '').replace(/\.ics$/i, '');
     if (!token) return res.status(400).send('Invalid feed token');

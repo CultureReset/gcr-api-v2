@@ -1435,7 +1435,7 @@ async function syncExternalCalendar(row) {
   } catch (err) {
     await db.from('entity_external_calendars').update({
       last_synced_at: new Date().toISOString(),
-      last_sync_status: 'error: ' + err.message,
+      last_sync_status: 'error: Calendar sync failed',
     }).eq('id', row.id);
   }
 }
