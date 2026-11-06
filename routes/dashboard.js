@@ -1,4 +1,5 @@
 const express = require('express');
+const { publicFeed, calendarPrivateHeaders } = require('../lib/calendarPrivacy');
 const { authRequired } = require('../middleware/auth');
 const supabase = require('../db');
 const getGcrDb = () => require('../db'); // db module exports the client itself
@@ -3401,13 +3402,15 @@ router.delete('/units/:id', async (req, res) => {
     res.json({ success: true });
 });
 
+router.use('/ical', calendarPrivateHeaders);
+
 // GET /api/dashboard/ical/feed-url — get (or lazily create) this business's calendar feed URL
 router.get('/ical/feed-url', async (req, res) => {
     const entitySlug = await resolveOwnedEntitySlug(req);
     if (!entitySlug) return res.status(404).json({ error: 'This account is not linked to a GCR listing yet' });
 
     const { data: entity, error } = await supabase.from('entity').select('ical_token').eq('slug', entitySlug).maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return res.status(500).json({ error: 'Calendar request failed' });
 
     let token = entity?.ical_token;
     if (!token) {
@@ -3426,7 +3429,7 @@ router.post('/ical/regenerate', async (req, res) => {
 
     const token = require('crypto').randomBytes(20).toString('hex');
     const { error } = await supabase.from('entity').update({ ical_token: token }).eq('slug', entitySlug);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return res.status(500).json({ error: 'Calendar request failed' });
 
     const base = process.env.PUBLIC_API_BASE_URL || 'https://gcr-api-clean.vercel.app';
     res.json({ feed_url: `${base}/api/public/ical/${entitySlug}/${token}.ics`, entity_slug: entitySlug });
@@ -3442,8 +3445,8 @@ router.get('/ical/external', async (req, res) => {
         .select('id, source_label, provider, resource_id, ical_url, last_synced_at, last_sync_status, created_at')
         .eq('entity_slug', entitySlug)
         .order('created_at');
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data || []);
+    if (error) return res.status(500).json({ error: 'Calendar request failed' });
+    res.json((data || []).map(publicFeed));
 });
 
 // POST /api/dashboard/ical/external — connect an external calendar (Airbnb/VRBO .ics export URL)
@@ -3463,8 +3466,8 @@ router.post('/ical/external', async (req, res) => {
         .insert(row)
         .select()
         .single();
-    if (error) return res.status(500).json({ error: error.message });
-    res.status(201).json(data);
+    if (error) return res.status(500).json({ error: 'Calendar request failed' });
+    res.status(201).json(publicFeed(data));
 });
 
 // DELETE /api/dashboard/ical/external/:id
@@ -3477,7 +3480,7 @@ router.delete('/ical/external/:id', async (req, res) => {
         .delete()
         .eq('id', req.params.id)
         .eq('entity_slug', entitySlug);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return res.status(500).json({ error: 'Calendar request failed' });
 
     // free the dates this feed had claimed on the unified calendar
     await supabase.from('booking_calendar')
