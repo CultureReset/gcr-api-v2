@@ -1,6 +1,6 @@
 const https = require('https');
 
-const GOOGLE_API_KEY = 'AIzaSyBP1yLnGq3IQXsqkbqiFhTGVyj1XV5_Rjc';
+const GOOGLE_API_KEY = (process.env.GOOGLE_MAPS_API_KEY || (() => { throw new Error('Set GOOGLE_MAPS_API_KEY before running this script'); })());
 
 const missingVenues = [
   'Bushwacker\'s Landing',
