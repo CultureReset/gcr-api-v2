@@ -134,8 +134,9 @@ mount('/api/verify-dns', () => require('./routes/verify-dns'));
 mount('/api/gcr/deep-crawl', () => require('./routes/gcr/deep-crawl'));
 
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: err.message });
+  const { redactCalendarText } = require('./lib/calendarPrivacy');
+  console.error('[request failed]', redactCalendarText(err && err.message));
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 app.listen(PORT, () => console.log(`GCR API listening on port ${PORT}`));

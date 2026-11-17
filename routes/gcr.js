@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { publicEntity } = require('../lib/calendarPrivacy');
 const { createClient } = require('@supabase/supabase-js');
 
 // ─── Central-time helper ────────────────────────────────────────────────────
@@ -381,7 +382,7 @@ async function buildFullEntity(slug) {
   const normalizedPhotos = (photos.data || []).map(p => ({ ...p, url: normalizeImageUrl(p.url), image_url: normalizeImageUrl(p.url), alt_text: p.caption || null }));
 
   return {
-    ...entity,
+    ...publicEntity(entity),
     hero_image_url: normalizeImageUrl(entity.hero_image_url),
     // Flexible offerings (charters, rentals, tours, services) — universal
     sections: flexSections,
@@ -1673,7 +1674,7 @@ router.get('/entities/:parentSlug/children', async (req, res) => {
       .order('name');
 
     if (error) return res.status(500).json({ error: error.message });
-    const children = data || [];
+    const children = (data || []).map(publicEntity);
 
     // Rental details for unit children (condo units, beach houses): beds,
     // baths, sleeps, nightly price from bookable_resources keyed by the
